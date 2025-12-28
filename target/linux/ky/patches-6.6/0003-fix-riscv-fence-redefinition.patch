@@ -1,0 +1,38 @@
+From: OpenWrt Builder <builder@openwrt.org>
+Date: Sat, 28 Dec 2024 00:00:00 +0000
+Subject: [PATCH] riscv: fix RISCV_FENCE redefinition error
+
+The RISCV_FENCE macro is defined in both barrier.h and fence.h,
+causing a redefinition error when compiling kernel modules.
+
+Fix by including fence.h in barrier.h and removing the duplicate
+definition.
+
+Signed-off-by: OpenWrt Builder <builder@openwrt.org>
+---
+ arch/riscv/include/asm/barrier.h | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/arch/riscv/include/asm/barrier.h b/arch/riscv/include/asm/barrier.h
+index 110f3784..a93001bb 100644
+--- a/arch/riscv/include/asm/barrier.h
++++ b/arch/riscv/include/asm/barrier.h
+@@ -10,6 +10,8 @@
+ #ifndef _ASM_RISCV_BARRIER_H
+ #define _ASM_RISCV_BARRIER_H
+
++#include <asm/fence.h>
++
+ #ifndef __ASSEMBLY__
+
+ #define nop()		__asm__ __volatile__ ("nop")
+@@ -17,8 +19,7 @@
+ #define __nops(n)	".rept	" #n "\nnop\n.endr\n"
+ #define nops(n)		__asm__ __volatile__ (__nops(n))
+
+-#define RISCV_FENCE(p, s) \
+-	__asm__ __volatile__ ("fence " #p "," #s : : : "memory")
++/* RISCV_FENCE is now defined in asm/fence.h */
+
+ /* These barriers need to enforce ordering on both devices or memory. */
+ #define mb()		RISCV_FENCE(iorw,iorw)

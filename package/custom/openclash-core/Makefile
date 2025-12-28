@@ -12,7 +12,7 @@ define Package/$(PKG_NAME)
 	CATEGORY:=LuCI
 	SUBMENU:=3. Applications
 	TITLE:=OpenClash Core Files (mihomo + GeoIP/GeoSite)
-	PKGARCH:=riscv64
+	PKGARCH:=riscv64_riscv64
 	DEPENDS:=+luci-app-openclash
 endef
 
