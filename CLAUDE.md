@@ -26,25 +26,41 @@
 
 ImmortalWrt 是 OpenWrt 的一个分支，是一个面向网络设备的嵌入式 Linux 发行版。这是一个完整的构建系统，可以交叉编译 Linux 内核、工具链和软件包，生成路由器和嵌入式设备的固件镜像。
 
-当前分支：`openwrt-24.10`
+当前分支：`orangepi-r2s-new`
 
 ### Orange Pi R2S 支持
 
-本仓库正在添加对 Orange Pi R2S（基于 RISC-V KY X1 SoC）的支持：
+本仓库为 Orange Pi R2S（基于 RISC-V KY X1 SoC）定制：
 - Target 目录：`target/linux/ky/`
 - 内核版本：6.6.119
 - 设备定义：`target/linux/ky/image/riscv64.mk`
+- 默认 IP：10.0.2.1
+- 默认 WAN 口：eth3（靠近电源接口）
 
 ## 构建命令
 
-### 初始化设置
+### 使用 build.sh（推荐）
+
+```bash
+./build.sh all               # 一键编译（保留现有 .config）
+./build.sh rebuild           # 清理后重新编译
+./build.sh kernel-rebuild    # 仅重新编译内核
+./build.sh reset-config r2s  # 重置配置
+./build.sh menu              # 打开 menuconfig
+./build.sh feeds             # 更新并安装 feeds
+./build.sh saveconfig        # 保存当前配置到 defconfig
+```
+
+### 原生命令
+
+#### 初始化设置
 ```bash
 ./scripts/feeds update -a    # 下载所有软件包 feeds
 ./scripts/feeds install -a   # 安装软件包符号链接
 make menuconfig              # 配置目标、软件包和选项
 ```
 
-### 构建
+#### 构建
 ```bash
 make                         # 完整构建（工具链 + 内核 + 软件包 + 镜像）
 make -j$(nproc)              # 并行构建

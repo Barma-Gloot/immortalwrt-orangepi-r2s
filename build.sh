@@ -131,12 +131,26 @@ do_build() {
     echo "=============================="
     if [ $build_status -eq 0 ]; then
         echo "编译成功！用时: ${minutes}分${seconds}秒"
+        echo "日志已保存到: build.log"
+        echo "=============================="
+        echo ""
+        # 显示生成的固件文件
+        local output_dir="bin/targets/ky/riscv64"
+        if [ -d "$output_dir" ]; then
+            echo "固件目录: $output_dir"
+            echo ""
+            echo "生成的固件文件:"
+            ls -lh "$output_dir"/*.img.gz "$output_dir"/*.img 2>/dev/null | awk '{print "  " $NF " (" $5 ")"}'
+            echo ""
+            echo "SHA256:"
+            cat "$output_dir"/sha256sums 2>/dev/null | grep -E "\.img\.gz$|\.img$" | awk '{print "  " $2 ": " $1}'
+        fi
     else
         echo "编译失败！用时: ${minutes}分${seconds}秒"
         echo "请查看 build.log 或运行: make -j1 V=s"
+        echo "日志已保存到: build.log"
+        echo "=============================="
     fi
-    echo "日志已保存到: build.log"
-    echo "=============================="
 
     return $build_status
 }
@@ -162,17 +176,7 @@ do_all() {
     fi
     echo ""
 
-    if do_build; then
-        echo ""
-        echo "=============================================="
-        echo "  编译成功！固件位置:"
-        echo "  bin/targets/ky/riscv64/"
-        echo "=============================================="
-    else
-        echo ""
-        echo "=============================================="
-        echo "  编译失败！请检查错误信息"
-        echo "=============================================="
+    if ! do_build; then
         exit 1
     fi
 }

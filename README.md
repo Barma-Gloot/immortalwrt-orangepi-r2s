@@ -44,7 +44,49 @@ TX:        2
 
 ### 2. CPU 负载优化
 
-- 禁用 GPU (PowerVR) 驱动，避免 vq0/vq1 内核线程导致的高负载
+为避免不必要的内核线程占用 CPU，本固件禁用了以下功能：
+
+| 配置项 | 说明 | 禁用原因 |
+|--------|------|----------|
+| `CONFIG_POWERVR_ROGUE` | PowerVR GPU 驱动 | 路由器不需要 GPU 渲染 |
+| `CONFIG_X1_REMOTEPROC` | KY X1 远程处理器驱动 | 产生 vq0/vq1 内核线程 |
+| `CONFIG_REMOTEPROC` | 远程处理器子系统 | 用于协处理器通信，路由器不需要 |
+| `CONFIG_RPMSG` | 远程消息子系统 | REMOTEPROC 的依赖 |
+
+**症状**：未禁用时，`vq0` 和 `vq1` 内核线程会处于 D (不可中断) 状态，导致系统负载持续为 2.0。
+
+<details>
+<summary>如何重新启用这些功能</summary>
+
+如果需要使用 GPU 或协处理器功能（如多媒体应用、AI 推理等），可以重新启用：
+
+1. 编辑内核配置文件：
+```bash
+nano target/linux/ky/riscv64/config-6.6
+```
+
+2. 修改以下配置项：
+```
+# GPU (PowerVR) 支持
+CONFIG_POWERVR_ROGUE=y
+
+# 远程处理器支持（启用 vq0/vq1）
+CONFIG_REMOTEPROC=y
+CONFIG_REMOTEPROC_CDEV=y
+CONFIG_RPMSG=y
+CONFIG_RPMSG_CHAR=y
+CONFIG_RPMSG_VIRTIO=y
+CONFIG_X1_REMOTEPROC=y
+```
+
+3. 重新编译内核：
+```bash
+./build.sh kernel-rebuild
+```
+
+**注意**：启用后系统负载会增加约 2.0，这是正常现象。
+
+</details>
 
 ### 3. 性能测试
 
