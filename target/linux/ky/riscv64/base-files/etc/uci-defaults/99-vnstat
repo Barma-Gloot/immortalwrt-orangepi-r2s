@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Configure vnstat to monitor br-lan and eth3 for Orange Pi R2S
+
+[ -f /etc/config/vnstat ] || exit 0
+
+uci -q batch <<-EOF
+	delete vnstat.@vnstat[0].interface
+	add_list vnstat.@vnstat[0].interface='br-lan'
+	add_list vnstat.@vnstat[0].interface='eth3'
+	commit vnstat
+EOF
+
+exit 0
