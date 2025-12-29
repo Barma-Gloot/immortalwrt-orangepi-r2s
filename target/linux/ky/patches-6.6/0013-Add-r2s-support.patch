@@ -5,9 +5,9 @@ Subject: [PATCH] Add r2s support
 
 ---
  arch/riscv/boot/dts/ky/Makefile            |   2 +-
- arch/riscv/boot/dts/ky/x1_orangepi-r2s.dts | 850 +++++++++++++++++++++
+ arch/riscv/boot/dts/ky/x1_orangepi-r2s.dts | 851 +++++++++++++++++++++
  arch/riscv/boot/dts/ky/x1_orangepi-rv2.dts |   2 +-
- 3 files changed, 852 insertions(+), 2 deletions(-)
+ 3 files changed, 853 insertions(+), 2 deletions(-)
  create mode 100644 arch/riscv/boot/dts/ky/x1_orangepi-r2s.dts
 
 diff --git a/arch/riscv/boot/dts/ky/Makefile b/arch/riscv/boot/dts/ky/Makefile
@@ -25,7 +25,7 @@ new file mode 100644
 index 000000000..e1bbe23cd
 --- /dev/null
 +++ b/arch/riscv/boot/dts/ky/x1_orangepi-r2s.dts
-@@ -0,0 +1,850 @@
+@@ -0,0 +1,851 @@
 +// SPDX-License-Identifier: (GPL-2.0 OR MIT)
 +/* Copyright (c) 2023 Ky, Inc */
 +
@@ -201,21 +201,21 @@ index 000000000..e1bbe23cd
 +&i2c0 {
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&pinctrl_i2c0>;
-+	ky,i2c-fast-mode;
++	ky,dma-disable;
 +	status = "okay";
 +};
 +
 +&i2c1 {
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&pinctrl_i2c1>;
-+	ky,i2c-fast-mode;
++	ky,dma-disable;
 +	status = "okay";
 +};
 +
 +&i2c2 {
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&pinctrl_i2c2_0>;
-+	ky,i2c-fast-mode;
++	ky,dma-disable;
 +	status = "okay";
 +
 +	eeprom@50{
@@ -463,7 +463,7 @@ index 000000000..e1bbe23cd
 +
 +&pinctrl {
 +	pinctrl-single,gpio-range = <
-+		&range GPIO_49  2 (MUX_MODE0 | EDGE_NONE | PULL_UP   | PAD_3V_DS4)
++		&range GPIO_49  2 (MUX_MODE0 | EDGE_NONE | PULL_UP   | PAD_1V8_DS2)
 +		&range GPIO_58  1 (MUX_MODE0 | EDGE_NONE | PULL_UP   | PAD_1V8_DS2)
 +		&range GPIO_63  1 (MUX_MODE0 | EDGE_NONE | PULL_UP   | PAD_1V8_DS2)
 +		&range GPIO_64  1 (MUX_MODE1 | EDGE_NONE | PULL_UP   | PAD_1V8_DS2)
@@ -823,7 +823,7 @@ index 000000000..e1bbe23cd
 +};
 +
 +&imggpu {
-+	status = "okay";
++	status = "disabled";
 +};
 +
 +&qspi {
@@ -844,20 +844,21 @@ index 000000000..e1bbe23cd
 +&ccic0 {
 +	power-domains = <&power X1_PMU_ISP_PWR_DOMAIN>;
 +
-+	status = "okay";
++	status = "disabled";
 +};
 +&ccic1 {
 +	power-domains = <&power X1_PMU_ISP_PWR_DOMAIN>;
 +
-+	status = "okay";
++	status = "disabled";
 +};
 +&ccic2 {
 +	power-domains = <&power X1_PMU_ISP_PWR_DOMAIN>;
 +
-+	status = "okay";
++	status = "disabled";
 +};
 +&isp {
 +	power-domains = <&power X1_PMU_ISP_PWR_DOMAIN>;
++	status = "disabled";
 +};
 +
 +&cpp {
