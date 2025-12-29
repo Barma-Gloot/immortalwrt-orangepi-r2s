@@ -23,6 +23,8 @@ usage() {
     echo "  download          - 仅下载所有源码"
     echo "  clean             - 清理构建产物"
     echo "  dirclean          - 深度清理 (保留下载)"
+    echo "  rebuild [设备]    - 清理后重新编译 (dirclean + all)"
+    echo "  kernel-rebuild    - 仅重新编译内核"
     echo "  saveconfig        - 保存当前配置到 defconfig"
     echo ""
     echo "示例:"
@@ -212,6 +214,27 @@ case "$1" in
     dirclean)
         echo "深度清理..."
         make dirclean
+        ;;
+    rebuild)
+        echo "=============================================="
+        echo "  重新编译 (清理后编译)"
+        echo "=============================================="
+        echo ""
+        echo "执行 dirclean..."
+        make dirclean
+        echo ""
+        # 删除 .config 以便重新加载
+        rm -f .config
+        do_all "${2:-r2s}"
+        ;;
+    kernel-rebuild)
+        echo "=============================================="
+        echo "  重新编译内核"
+        echo "=============================================="
+        make target/linux/clean
+        make target/linux/compile -j$NPROC V=s 2>&1 | tee kernel-build.log
+        echo "内核编译完成，继续编译固件..."
+        do_build
         ;;
     saveconfig)
         save_config
