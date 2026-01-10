@@ -23,7 +23,7 @@ jobs:
 
       - name: Prepare cache directories
         run: |
-          mkdir -p dl .ccache
+          mkdir -p dl .ccache build_dir staging_dir
 
       - name: Restore build cache
         uses: actions/cache@v4
@@ -31,9 +31,13 @@ jobs:
           path: |
             dl
             .ccache
-          key: ${{ runner.os }}-r2s-${{ hashFiles('defconfigs/opir2s_defconfig', 'feeds.conf.default') }}
+            build_dir
+            staging_dir
+          key: ${{ runner.os }}-r2s-${{ hashFiles('defconfigs/opir2s_defconfig', 'feeds.conf.default') }}-${{ github.run_number }}
           restore-keys: |
+            ${{ runner.os }}-r2s-${{ hashFiles('defconfigs/opir2s_defconfig', 'feeds.conf.default') }}-
             ${{ runner.os }}-r2s-
+          save-always: true
 
       - name: Install build dependencies
         run: |
