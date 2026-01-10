@@ -62,6 +62,10 @@ jobs:
           echo "CONFIG_CCACHE=y" >> .config
           make defconfig
 
+      - name: Download sources
+        run: |
+          make download -j$(nproc)
+
       - name: Build firmware
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
