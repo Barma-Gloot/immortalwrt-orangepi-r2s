@@ -2,6 +2,8 @@
 
 基于 [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) 的 Orange Pi R2S (RISC-V KY X1) 定制固件。
 
+> 如果想偷懒，可以用编译好的固件，下载链接: https://pan.baidu.com/s/1X4bthUYmBfYpbj_pr9O47Q?pwd=BWRT 提取码: BWRT
+
 ## 硬件信息
 
 - **SoC**: 进迭时空 KY X1 (RISC-V)
@@ -189,6 +191,21 @@ iperf Done.
 ```
 bin/targets/ky/riscv64/
 ```
+
+## GitHub Actions 云编译（Release）
+
+手动触发构建并发布 Release：
+
+1. 进入仓库的 Actions，选择 `Build R2S Release`，点击 `Run workflow`
+2. 可选参数：
+   - `release_tag`：自定义 tag（默认：`r2s-YYYYMMDD-<run_number>`）
+   - `release_name`：Release 标题
+   - `jobs`：编译并行数，填 `auto` 使用 `nproc`
+3. Release 产物包含：`*.img*` 与 `sha256sums`
+
+说明：
+- workflow 会执行 `./build.sh reset-config r2s`，确保使用默认配置
+- 使用 `dl/` 和 `.ccache` 缓存加速
 
 ## 致谢
 
