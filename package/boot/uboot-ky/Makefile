@@ -26,11 +26,13 @@ endef
 define U-Boot/orangepi-r2s-x1
   NAME:=X1 Orange Pi R2S
   BUILD_DEVICES:=x1_orangepi-r2s
+  UBOOT_CONFIG:=x1
 endef
 
 define U-Boot/orangepi-rv2-x1
   NAME:=X1 Orange Pi RV2
   BUILD_DEVICES:=x1_orangepi-rv2
+  UBOOT_CONFIG:=x1
 endef
 
 UBOOT_TARGETS := \
@@ -39,7 +41,6 @@ UBOOT_TARGETS := \
 
 define Build/Configure
 	$(call Build/Configure/U-Boot)
-	$(MAKE) -C $(PKG_BUILD_DIR) x1_defconfig
 endef
 
 define Build/InstallDev
