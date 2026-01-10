@@ -9,10 +9,6 @@ on:
       release_name:
         description: "Release name (optional)"
         required: false
-      jobs:
-        description: "make -j value (optional, auto = nproc)"
-        required: false
-        default: "auto"
 
 jobs:
   build:
