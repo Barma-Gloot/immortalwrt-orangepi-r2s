@@ -60,17 +60,13 @@ jobs:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_MAXSIZE: 2G
         run: |
-          ./build.sh all r2s 2>&1 | tee build-full.log || {
+          ./build.sh all r2s || {
             echo ""
             echo "=========================================="
-            echo "=== Build failed, extracting errors ==="
+            echo "=== Build failed, rebuilding with V=s ==="
             echo "=========================================="
             echo ""
-            # 提取所有失败的包
-            grep -E "ERROR:.*failed to build" build-full.log || true
-            echo ""
-            echo "=== Last 500 lines of build log ==="
-            tail -500 build-full.log
+            make -j1 V=s 2>&1 | tail -1000
             exit 1
           }
 
