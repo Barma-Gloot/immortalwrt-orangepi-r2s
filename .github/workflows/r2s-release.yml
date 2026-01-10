@@ -55,30 +55,12 @@ jobs:
           ccache -M "$CCACHE_MAXSIZE"
           ccache -s
 
-      - name: Configure build
-        run: |
-          ./build.sh feeds
-          ./build.sh reset-config r2s
-          echo "CONFIG_CCACHE=y" >> .config
-          make defconfig
-
-      - name: Download sources
-        run: |
-          make download -j$(nproc)
-
       - name: Build firmware
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_MAXSIZE: 2G
-          JOBS_INPUT: ${{ github.event.inputs.jobs }}
         run: |
-          set -euo pipefail
-          if [ -z "${JOBS_INPUT}" ] || [ "${JOBS_INPUT}" = "auto" ]; then
-            JOBS=$(nproc)
-          else
-            JOBS="${JOBS_INPUT}"
-          fi
-          ./build.sh build -j"$JOBS"
+          ./build.sh all r2s
 
       - name: Collect release artifacts
         run: |
