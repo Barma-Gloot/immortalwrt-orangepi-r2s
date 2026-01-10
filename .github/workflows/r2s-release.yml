@@ -55,25 +55,22 @@ jobs:
           ccache -M "$CCACHE_MAXSIZE"
           ccache -s
 
-      - name: Debug - Show uboot-ky Makefile
-        run: |
-          echo "=== package/boot/uboot-ky/Makefile ==="
-          cat package/boot/uboot-ky/Makefile
-          echo ""
-          echo "=== Checking git status ==="
-          git log --oneline -3
-          git status
-
       - name: Build firmware
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_MAXSIZE: 2G
         run: |
-          ./build.sh all r2s || {
-            echo "=== Build failed, showing uboot-ky build log ==="
-            find build_dir -name "*.log" -path "*uboot*" -exec echo "--- {} ---" \; -exec tail -100 {} \; 2>/dev/null || true
-            echo "=== Trying to rebuild uboot-ky with V=s ==="
-            make package/boot/uboot-ky/compile V=s 2>&1 | tail -200
+          ./build.sh all r2s 2>&1 | tee build-full.log || {
+            echo ""
+            echo "=========================================="
+            echo "=== Build failed, extracting errors ==="
+            echo "=========================================="
+            echo ""
+            # 提取所有失败的包
+            grep -E "ERROR:.*failed to build" build-full.log || true
+            echo ""
+            echo "=== Last 500 lines of build log ==="
+            tail -500 build-full.log
             exit 1
           }
 
