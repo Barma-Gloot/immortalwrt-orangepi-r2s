@@ -1,78 +1,66 @@
 # ImmortalWrt for Orange Pi R2S
 
-基于 [ImmortalWrt](https://github.com/immortalwrt/immortalwrt) 的 Orange Pi R2S (RISC-V KY X1) 定制固件。
+*[English](#english) | [Русский](#русский)*
 
-> 如果想偷懒，可以用编译好的固件，下载链接: https://pan.baidu.com/s/1X4bthUYmBfYpbj_pr9O47Q?pwd=BWRT 提取码: BWRT
+---
 
-## 硬件信息
+<a name="english"></a>
+## English
 
-- **SoC**: 进迭时空 KY X1 (RISC-V)
-- **内核**: Linux 6.6.119
-- **网卡**: 2x RTL8125 (2.5GbE) + 2x 千兆口
+A custom **ImmortalWrt** firmware for the **Orange Pi R2S (RISC-V KY X1)**, based on [ImmortalWrt](https://github.com/immortalwrt/immortalwrt), forked from [naizhao/immortalwrt-orangepi-r2s](https://github.com/naizhao/immortalwrt-orangepi-r2s) (branch `orangepi-r2s-new`).
 
-## 网口配置
+### Hardware Specifications
 
-| 接口 | 位置 | 速率 | 默认角色 |
-|------|------|------|----------|
-| eth3 | 靠近电源接口 | 2.5GbE | **WAN** |
-| eth2 | 靠近 eth3 | 2.5GbE | LAN |
-| eth1 | 千兆口 | 1GbE | LAN |
-| eth0 | 千兆口 | 1GbE | LAN |
+- **SoC:** KY X1 (RISC-V) by SpacemiT
+- **Kernel:** Linux 6.6.119
+- **Network Interfaces:** 2 × RTL8125 (2.5GbE) + 2 × Gigabit Ethernet
 
-## 默认配置
+### Network Port Layout (this fork)
 
-- **IP 地址**: `10.0.2.1`
-- **用户名**: `root`
-- **密码**: 无
+> This fork uses a different port layout than the upstream default — chosen to match a vendor-style setup with a single LAN bridge.
 
-## 优化说明
+| Interface | Physical Location | Speed | Role in this fork |
+|-----------|-------------------|-------|--------------------|
+| eth0 | — | GbE | **WAN** |
+| eth1 | — | GbE | LAN (bridged) |
+| eth2 | 2.5GbE port | 2.5GbE | LAN (bridged) |
+| eth3 | 2.5GbE port, closest to power connector | 2.5GbE | LAN (bridged) |
 
-### 1. 网卡性能优化
+### Default Configuration
 
-- 使用 `kmod-r8125` 驱动（版本 9.016.01-NAPI-RSS）
-- 启用 RSS (Receive Side Scaling) 多队列支持
-- 配置：4 RX 队列 + 2 TX 队列
+- **LAN IP Address:** `192.168.0.1`
+- **Username:** `root`
+- **Password:** *(set on first login)*
 
-```
-# ethtool -l eth2
-Channel parameters for eth2:
-Pre-set maximums:
-RX:        4
-TX:        2
-Current hardware settings:
-RX:        4
-TX:        2
-```
+### Optimizations Inherited From Upstream
 
-### 2. CPU 负载优化
+#### 1. Network Performance (RTL8125)
 
-为避免不必要的内核线程占用 CPU，本固件禁用了以下功能：
+- Uses the `kmod-r8125` driver (version **9.016.01-NAPI-RSS**)
+- RSS (Receive Side Scaling) enabled — **4 RX queues / 2 TX queues**
+- Measured throughput on 2.5GbE ports: ~1.94–2.00 Gbps (see upstream README history for full benchmark logs)
 
-| 配置项 | 说明 | 禁用原因 |
-|--------|------|----------|
-| `CONFIG_POWERVR_ROGUE` | PowerVR GPU 驱动 | 路由器不需要 GPU 渲染 |
-| `CONFIG_X1_REMOTEPROC` | KY X1 远程处理器驱动 | 产生 vq0/vq1 内核线程 |
-| `CONFIG_REMOTEPROC` | 远程处理器子系统 | 用于协处理器通信，路由器不需要 |
-| `CONFIG_RPMSG` | 远程消息子系统 | REMOTEPROC 的依赖 |
+#### 2. CPU Load Optimization
 
-**症状**：未禁用时，`vq0` 和 `vq1` 内核线程会处于 D (不可中断) 状态，导致系统负载持续为 2.0。
+The following kernel features are disabled by default to avoid uninterruptible (`D`-state) `vq0`/`vq1` kernel threads that otherwise keep load average around 2.0 on an idle system:
+
+| Configuration | Description |
+|--------------|-------------|
+| `CONFIG_POWERVR_ROGUE` | PowerVR GPU driver (not needed for router workloads) |
+| `CONFIG_X1_REMOTEPROC` | KY X1 Remote Processor driver |
+| `CONFIG_REMOTEPROC` | Remote Processor subsystem |
+| `CONFIG_RPMSG` | Remote Processor Messaging subsystem |
 
 <details>
-<summary>如何重新启用这些功能</summary>
+<summary>Re-enabling these features (GPU / coprocessor use)</summary>
 
-如果需要使用 GPU 或协处理器功能（如多媒体应用、AI 推理等），可以重新启用：
-
-1. 编辑内核配置文件：
 ```bash
 nano target/linux/ky/riscv64/config-6.6
 ```
 
-2. 修改以下配置项：
-```
-# GPU (PowerVR) 支持
+Enable:
+```text
 CONFIG_POWERVR_ROGUE=y
-
-# 远程处理器支持（启用 vq0/vq1）
 CONFIG_REMOTEPROC=y
 CONFIG_REMOTEPROC_CDEV=y
 CONFIG_RPMSG=y
@@ -81,133 +69,271 @@ CONFIG_RPMSG_VIRTIO=y
 CONFIG_X1_REMOTEPROC=y
 ```
 
-3. 重新编译内核：
+Then rebuild the kernel:
 ```bash
 ./build.sh kernel-rebuild
 ```
 
-**注意**：启用后系统负载会增加约 2.0，这是正常现象。
+Expect load average to rise by ~2.0 due to the additional kernel threads — this is expected.
 
 </details>
 
-### 3. 性能测试
+### Changes Made in This Fork
 
-iperf3 测试结果（2.5G 网口）：
+This fork was built to solve a specific problem: the vendor `ky/riscv64` target is not part of upstream OpenWrt and has no prebuilt package repository, so [Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki)/[mihomo](https://github.com/MetaCubeX/mihomo) could not be installed via `opkg` — the required `kmod-inet-diag`, `kmod-nft-socket`, `kmod-dummy` kernel modules are hash-locked to the exact kernel build and no one publishes them for this specific vendor tree. Building a custom image with these modules baked in was the only reliable fix.
 
-| 方向 | 速率 |
-|------|------|
-| 上传 (客户端→路由器) | **1.99 Gbps** |
-| 下载 (路由器→客户端) | **1.94 Gbps** |
+1. **TUN/TPROXY infrastructure for Nikki/Mihomo** — the following kmod packages are built into the image so `opkg install luci-app-nikki` succeeds without dependency errors on first boot:
+   `kmod-tun`, `kmod-nf-tproxy`, `kmod-nft-tproxy`, `kmod-nf-socket`, `kmod-nft-socket`, `kmod-inet-diag`, `kmod-netlink-diag`, `kmod-dummy`.
+   Nikki/mihomo itself is **not** included in the image — it's installed later from the online feed once the board is running, now that its dependencies are satisfied.
 
-<details>
-<summary>详细测试数据</summary>
+2. **`kmod-usb-printer`** — enabled for network printer sharing via p910nd/USB.
 
-**上传测试 (客户端→路由器)**
-```
-~ iperf3-darwin -c 10.0.2.1 -p 5201 -t 10
-Connecting to host 10.0.2.1, port 5201
-[  5] local 10.0.2.117 port 53420 connected to 10.0.2.1 port 5201
-[ ID] Interval           Transfer     Bitrate         Retr  Cwnd          RTT
-[  5]   0.00-1.00   sec   237 MBytes  1.99 Gbits/sec  183   2.47 MBytes   10ms
-[  5]   1.00-2.00   sec   237 MBytes  1.99 Gbits/sec    0   2.58 MBytes   11ms
-[  5]   2.00-3.00   sec   237 MBytes  1.99 Gbits/sec    0   2.67 MBytes   11ms
-[  5]   3.00-4.00   sec   238 MBytes  2.00 Gbits/sec    0   2.73 MBytes   11ms
-[  5]   4.00-5.00   sec   239 MBytes  2.00 Gbits/sec    0   2.78 MBytes   12ms
-[  5]   5.00-6.00   sec   238 MBytes  2.00 Gbits/sec    0   2.81 MBytes   9ms
-[  5]   6.00-7.00   sec   237 MBytes  1.99 Gbits/sec    0   2.83 MBytes   12ms
-[  5]   7.00-8.00   sec   238 MBytes  2.00 Gbits/sec    0   2.86 MBytes   13ms
-[  5]   8.00-9.00   sec   238 MBytes  2.00 Gbits/sec    0   2.97 MBytes   13ms
-[  5]   9.00-10.00  sec   238 MBytes  2.00 Gbits/sec    2   2.25 MBytes   9ms
-- - - - - - - - - - - - - - - - - - - - - - - - -
-[ ID] Interval           Transfer     Bitrate         Retr
-[  5]   0.00-10.00  sec  2.32 GBytes  1.99 Gbits/sec  185             sender
-[  5]   0.00-10.00  sec  2.32 GBytes  1.99 Gbits/sec                  receiver
+3. **Watchdog enabled** — removed `status = "disabled"` and `spa,wdt-disabled` from the `soc/watchdog@d4080000` devicetree node (disabled by default upstream).
 
-iperf Done.
-```
+4. **`CONFIG_SLUB_DEBUG=y`** — enabled in the kernel config to allow memory-leak diagnostics via `/proc/slabinfo` / `slabtop`.
 
-**下载测试 (路由器→客户端)**
-```
-~ iperf3-darwin -c 10.0.2.1 -p 5201 -t 10 -R
-Connecting to host 10.0.2.1, port 5201
-Reverse mode, remote host 10.0.2.1 is sending
-[  5] local 10.0.2.117 port 53339 connected to 10.0.2.1 port 5201
-[ ID] Interval           Transfer     Bitrate         Rwnd
-[  5]   0.00-1.00   sec   230 MBytes  1.93 Gbits/sec  1.86 MBytes
-[  5]   1.00-2.00   sec   232 MBytes  1.95 Gbits/sec  1.86 MBytes
-[  5]   2.00-3.00   sec   231 MBytes  1.94 Gbits/sec  1.86 MBytes
-[  5]   3.00-4.00   sec   232 MBytes  1.95 Gbits/sec  1.86 MBytes
-[  5]   4.00-5.00   sec   232 MBytes  1.95 Gbits/sec  1.86 MBytes
-[  5]   5.00-6.00   sec   232 MBytes  1.95 Gbits/sec  1.86 MBytes
-[  5]   6.00-7.00   sec   231 MBytes  1.94 Gbits/sec  1.86 MBytes
-[  5]   7.00-8.00   sec   232 MBytes  1.94 Gbits/sec  1.83 MBytes
-[  5]   8.00-9.00   sec   232 MBytes  1.95 Gbits/sec  1.86 MBytes
-[  5]   9.00-10.00  sec   232 MBytes  1.95 Gbits/sec  1.86 MBytes
-- - - - - - - - - - - - - - - - - - - - - - - - -
-[ ID] Interval           Transfer     Bitrate         Retr
-[  5]   0.00-10.00  sec  2.26 GBytes  1.94 Gbits/sec    1             sender
-[  5]   0.00-10.00  sec  2.26 GBytes  1.94 Gbits/sec                  receiver
+5. **IPv4 policy routing fix** — upstream `target/linux/ky/riscv64/config-6.6` ships with:
+   ```text
+   CONFIG_IPV6_MULTIPLE_TABLES=y
+   # CONFIG_IP_MULTIPLE_TABLES is not set
+   ```
+   IPv6 policy routing (multiple routing tables) was enabled but IPv4 was not — a gap in the upstream `ky` target itself, not introduced by any fork. This blocks TPROXY-based routing (`ip rule add fwmark ... table ...`) for IPv4. Fixed by enabling `CONFIG_IP_MULTIPLE_TABLES=y` to match the IPv6 setting.
 
-iperf Done.
-```
+6. **Localization** — Chinese (`zh-cn`) LuCI translations replaced with Russian (`ru`) translations throughout.
 
-</details>
+7. **Removed unused proxy/monitoring tools** to keep the image lean: `luci-app-openclash`, `luci-app-passwall`, `luci-app-smartdns`, `luci-app-zerotier`, `luci-app-openvpn`, `luci-app-netdata`, `luci-app-nlbwmon`, `luci-app-upnp`, `luci-app-vnstat2`, `luci-app-watchcat`, `luci-app-cpulimit`, `luci-app-autoreboot`, `luci-app-netspeedtest`, `luci-app-vlmcsd`, and their Chinese-locale packages.
 
-## 构建方法
+8. **Network configuration overlay** (`files/etc/config/network`) ships with the port layout described above baked in — no manual reconfiguration needed after first boot.
+
+### Building
 
 ```bash
-# 一键编译（保留现有配置）
+# Build everything while preserving the existing configuration
 ./build.sh all
 
-# 重置配置后编译
+# Reset to the default configuration before building
 ./build.sh reset-config r2s
 ./build.sh all
 
-# 完全重新编译（清理后编译）
+# Perform a completely clean rebuild
 ./build.sh rebuild
 
-# 仅重新编译内核（修改内核配置后使用）
+# Rebuild only the kernel (after modifying kernel configuration)
 ./build.sh kernel-rebuild
+
+# Save current .config back to defconfigs/opir2s_defconfig
+./build.sh saveconfig
 ```
 
-### 所有命令
+#### Available Commands
 
-| 命令 | 说明 |
-|------|------|
-| `all [设备]` | 一键编译：更新 feeds + 编译（保留现有 .config） |
-| `reset-config <设备>` | 重置 .config（r2s 或 rv2） |
-| `feeds` | 更新并安装所有 feeds |
-| `menu` | 打开 menuconfig |
-| `build [选项]` | 开始编译 |
-| `rebuild [设备]` | 深度清理后重新编译 |
-| `kernel-rebuild` | 清理并重新编译内核 |
-| `clean` | 清理构建产物 |
-| `dirclean` | 深度清理（保留下载） |
-| `saveconfig` | 保存当前配置到 defconfig |
+| Command | Description |
+|---------|-------------|
+| `all [device]` | Update feeds and build while preserving the current `.config`. |
+| `reset-config <device>` | Reset `.config` (`r2s` or `rv2`). |
+| `feeds` | Update and install all package feeds. |
+| `menu` | Launch `menuconfig`. |
+| `build [options]` | Start the build process. |
+| `rebuild [device]` | Perform a clean rebuild. |
+| `kernel-rebuild` | Clean and rebuild only the kernel. |
+| `clean` | Remove build artifacts. |
+| `dirclean` | Deep clean while preserving downloaded source files. |
+| `saveconfig` | Save the current configuration as `defconfig`. |
 
-## 固件位置
+### Firmware Output
 
-编译完成后，固件位于：
-```
+After a successful build, the firmware images can be found in:
+```text
 bin/targets/ky/riscv64/
 ```
 
-## GitHub Actions 云编译（Release）
+### GitHub Actions (Release Builds)
 
-手动触发构建并发布 Release：
+1. Open the repository's **Actions** tab.
+2. Select **Build R2S Release**.
+3. Click **Run workflow**, selecting the branch with your changes.
+4. Optional parameters:
+   - **release_tag** — Custom release tag (default: `r2s-YYYYMMDD-<run_number>`)
+   - **release_name** — Release title
+5. The published release includes `*.img*` and `sha256sums`.
 
-1. 进入仓库的 Actions，选择 `Build R2S Release`，点击 `Run workflow`
-2. 可选参数：
-   - `release_tag`：自定义 tag（默认：`r2s-YYYYMMDD-<run_number>`）
-   - `release_name`：Release 标题
-   - `jobs`：编译并行数，填 `auto` 使用 `nproc`
-3. Release 产物包含：`*.img*` 与 `sha256sums`
+`dl/` and `.ccache` are cached between runs to speed up subsequent builds.
 
-说明：
-- workflow 会执行 `./build.sh reset-config r2s`，确保使用默认配置
-- 使用 `dl/` 和 `.ccache` 缓存加速
+### Flashing
 
-## 致谢
+The board has no SD card slot — flashing is done over USB in DFU mode via `fastboot`, using either the vendor `KyDevTool.exe` (Windows GUI) or manual `fastboot` commands on Linux. **Use the vendor u-boot/FSBL for the first flash** of a new image; the self-built `u-boot-opensbi.itb` can be tried later once the system is confirmed stable.
+
+### Acknowledgements
 
 - [ImmortalWrt](https://github.com/immortalwrt/immortalwrt)
 - [OpenWrt](https://openwrt.org)
+- [naizhao/immortalwrt-orangepi-r2s](https://github.com/naizhao/immortalwrt-orangepi-r2s) — original R2S port this fork is based on
+- [Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki) / [mihomo](https://github.com/MetaCubeX/mihomo)
+
+---
+
+<a name="русский"></a>
+## Русский
+
+Кастомная прошивка **ImmortalWrt** для платы **Orange Pi R2S (RISC-V KY X1)**, основана на [ImmortalWrt](https://github.com/immortalwrt/immortalwrt), форк от [naizhao/immortalwrt-orangepi-r2s](https://github.com/naizhao/immortalwrt-orangepi-r2s) (ветка `orangepi-r2s-new`).
+
+### Характеристики платы
+
+- **SoC:** KY X1 (RISC-V), производитель SpacemiT
+- **Ядро:** Linux 6.6.119
+- **Сетевые интерфейсы:** 2 × RTL8125 (2.5GbE) + 2 × Gigabit Ethernet
+
+### Раскладка сетевых портов (в этом форке)
+
+> В этом форке используется другая раскладка портов, чем в апстриме по умолчанию — выбрана схема с одним LAN-бриджем, аналогичная вендорской.
+
+| Интерфейс | Физическое расположение | Скорость | Роль в этом форке |
+|-----------|--------------------------|----------|---------------------|
+| eth0 | — | GbE | **WAN** |
+| eth1 | — | GbE | LAN (в бридже) |
+| eth2 | порт 2.5GbE | 2.5GbE | LAN (в бридже) |
+| eth3 | порт 2.5GbE, ближе к разъёму питания | 2.5GbE | LAN (в бридже) |
+
+### Настройки по умолчанию
+
+- **IP-адрес LAN:** `192.168.0.1`
+- **Логин:** `root`
+- **Пароль:** *(задаётся при первом входе)*
+
+### Оптимизации, унаследованные от апстрима
+
+#### 1. Производительность сети (RTL8125)
+
+- Используется драйвер `kmod-r8125` (версия **9.016.01-NAPI-RSS**)
+- Включён RSS (Receive Side Scaling) — **4 очереди RX / 2 очереди TX**
+- Измеренная пропускная способность на портах 2.5GbE: ~1.94–2.00 Гбит/с
+
+#### 2. Оптимизация загрузки CPU
+
+По умолчанию отключены следующие опции ядра — без этого ядерные потоки `vq0`/`vq1` зависают в состоянии `D` (непрерываемое ожидание), из-за чего `load average` держится около 2.0 даже на простаивающей системе:
+
+| Опция | Описание |
+|-------|----------|
+| `CONFIG_POWERVR_ROGUE` | Драйвер GPU PowerVR (не нужен для роутера) |
+| `CONFIG_X1_REMOTEPROC` | Драйвер сопроцессора KY X1 |
+| `CONFIG_REMOTEPROC` | Подсистема Remote Processor |
+| `CONFIG_RPMSG` | Подсистема обмена сообщениями с сопроцессором |
+
+<details>
+<summary>Как включить обратно (для GPU / сопроцессора)</summary>
+
+```bash
+nano target/linux/ky/riscv64/config-6.6
+```
+
+Включить:
+```text
+CONFIG_POWERVR_ROGUE=y
+CONFIG_REMOTEPROC=y
+CONFIG_REMOTEPROC_CDEV=y
+CONFIG_RPMSG=y
+CONFIG_RPMSG_CHAR=y
+CONFIG_RPMSG_VIRTIO=y
+CONFIG_X1_REMOTEPROC=y
+```
+
+Затем пересобрать ядро:
+```bash
+./build.sh kernel-rebuild
+```
+
+После этого `load average` вырастет примерно на 2.0 из-за дополнительных ядерных потоков — это ожидаемо.
+
+</details>
+
+### Изменения, внесённые в этом форке
+
+Форк создан для решения конкретной проблемы: вендорский таргет `ky/riscv64` не входит в апстрим OpenWrt и не имеет пакетного репозитория, поэтому [Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki)/[mihomo](https://github.com/MetaCubeX/mihomo) не устанавливались через `opkg` — нужные модули ядра `kmod-inet-diag`, `kmod-nft-socket`, `kmod-dummy` жёстко привязаны к точному хэшу сборки ядра, и под конкретно этот вендорский таргет их никто не публикует. Единственное надёжное решение — собрать собственный образ с этими модулями внутри.
+
+1. **Инфраструктура TUN/TPROXY для Nikki/Mihomo** — в образ включены следующие kmod-пакеты, чтобы `opkg install luci-app-nikki` проходил без ошибок зависимостей сразу после первой загрузки:
+   `kmod-tun`, `kmod-nf-tproxy`, `kmod-nft-tproxy`, `kmod-nf-socket`, `kmod-nft-socket`, `kmod-inet-diag`, `kmod-netlink-diag`, `kmod-dummy`.
+   Сам Nikki/mihomo в образ **не включён** — устанавливается позже из онлайн-фида уже на работающей плате, когда все его зависимости уже удовлетворены.
+
+2. **`kmod-usb-printer`** — включён для расшаривания принтера по сети через p910nd/USB.
+
+3. **Включён watchdog** — из devicetree-узла `soc/watchdog@d4080000` убраны `status = "disabled"` и `spa,wdt-disabled` (в апстриме watchdog отключён по умолчанию).
+
+4. **`CONFIG_SLUB_DEBUG=y`** — включено в конфиге ядра для диагностики утечек памяти через `/proc/slabinfo` / `slabtop`.
+
+5. **Фикс policy routing для IPv4** — в апстримном `target/linux/ky/riscv64/config-6.6`:
+   ```text
+   CONFIG_IPV6_MULTIPLE_TABLES=y
+   # CONFIG_IP_MULTIPLE_TABLES is not set
+   ```
+   Policy routing (множественные таблицы маршрутизации) было включено для IPv6, но не для IPv4 — это недоработка самого апстримного таргета `ky`, а не привнесённая каким-либо форком. Из-за этого не работает TPROXY-маршрутизация (`ip rule add fwmark ... table ...`) для IPv4. Исправлено включением `CONFIG_IP_MULTIPLE_TABLES=y` по аналогии с IPv6.
+
+6. **Локализация** — китайские (`zh-cn`) переводы LuCI везде заменены на русские (`ru`).
+
+7. **Убраны неиспользуемые прокси/мониторинговые инструменты** для облегчения образа: `luci-app-openclash`, `luci-app-passwall`, `luci-app-smartdns`, `luci-app-zerotier`, `luci-app-openvpn`, `luci-app-netdata`, `luci-app-nlbwmon`, `luci-app-upnp`, `luci-app-vnstat2`, `luci-app-watchcat`, `luci-app-cpulimit`, `luci-app-autoreboot`, `luci-app-netspeedtest`, `luci-app-vlmcsd` и их китайские локализации.
+
+8. **Оверлей сетевой конфигурации** (`files/etc/config/network`) уже содержит описанную выше раскладку портов — ручная настройка после первой загрузки не требуется.
+
+### Сборка
+
+```bash
+# Полная сборка с сохранением текущего .config
+./build.sh all
+
+# Сброс конфига к дефолтному перед сборкой
+./build.sh reset-config r2s
+./build.sh all
+
+# Полная пересборка с нуля (dirclean + all)
+./build.sh rebuild
+
+# Пересборка только ядра (после правки конфига ядра)
+./build.sh kernel-rebuild
+
+# Сохранить текущий .config обратно в defconfigs/opir2s_defconfig
+./build.sh saveconfig
+```
+
+#### Доступные команды
+
+| Команда | Описание |
+|---------|----------|
+| `all [устройство]` | Обновить feeds и собрать, сохраняя текущий `.config`. |
+| `reset-config <устройство>` | Сбросить `.config` (`r2s` или `rv2`). |
+| `feeds` | Обновить и установить все feeds. |
+| `menu` | Открыть `menuconfig`. |
+| `build [опции]` | Запустить сборку. |
+| `rebuild [устройство]` | Полная пересборка с очисткой. |
+| `kernel-rebuild` | Очистить и пересобрать только ядро. |
+| `clean` | Удалить артефакты сборки. |
+| `dirclean` | Глубокая очистка с сохранением загруженных исходников. |
+| `saveconfig` | Сохранить текущий конфиг как `defconfig`. |
+
+### Результат сборки
+
+После успешной сборки образы находятся здесь:
+```text
+bin/targets/ky/riscv64/
+```
+
+### GitHub Actions (сборка релизов)
+
+1. Открыть вкладку **Actions** в репозитории.
+2. Выбрать **Build R2S Release**.
+3. Нажать **Run workflow**, выбрав ветку со своими изменениями.
+4. Необязательные параметры:
+   - **release_tag** — свой тег релиза (по умолчанию `r2s-ГГГГММДД-<номер_запуска>`)
+   - **release_name** — заголовок релиза
+5. В опубликованный релиз попадают `*.img*` и `sha256sums`.
+
+Директории `dl/` и `.ccache` кэшируются между запусками для ускорения последующих сборок.
+
+### Прошивка
+
+У платы нет слота для SD-карты — прошивка выполняется через USB в режиме DFU через `fastboot`, либо вендорским `KyDevTool.exe` (GUI под Windows), либо вручную командами `fastboot` в Linux. **Для первой прошивки нового образа использовать вендорский u-boot/FSBL** — собственный `u-boot-opensbi.itb` можно попробовать позже, когда система уже стабильно работает.
+
+### Благодарности
+
+- [ImmortalWrt](https://github.com/immortalwrt/immortalwrt)
+- [OpenWrt](https://openwrt.org)
+- [naizhao/immortalwrt-orangepi-r2s](https://github.com/naizhao/immortalwrt-orangepi-r2s) — оригинальный порт под R2S, на котором основан этот форк
+- [Nikki](https://github.com/nikkinikki-org/OpenWrt-nikki) / [mihomo](https://github.com/MetaCubeX/mihomo)
