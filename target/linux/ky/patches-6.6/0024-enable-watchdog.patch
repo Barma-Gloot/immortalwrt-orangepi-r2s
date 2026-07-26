@@ -1,0 +1,11 @@
+--- a/arch/riscv/boot/dts/ky/x1.dtsi
++++ b/arch/riscv/boot/dts/ky/x1.dtsi
+@@ -1822,8 +1822,6 @@
+ 				<0x0 0xd4050000 0x0 0x1024>;
+ 			interrupts = <35>;
+ 			interrupt-parent = <&intc>;
+-			spa,wdt-disabled;
+-			status = "disabled";
+ 		};
+ 
+ 		reboot: handler@d4282f90 {
