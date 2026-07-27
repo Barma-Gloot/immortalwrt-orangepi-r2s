@@ -306,7 +306,7 @@ comment "Debuggers"
 config GDB
 	bool
 	prompt "Build gdb" if TOOLCHAINOPTS
-	default y if !EXTERNAL_TOOLCHAIN
+        default n
 	help
 	  Enable if you want to build the gdb.
 
