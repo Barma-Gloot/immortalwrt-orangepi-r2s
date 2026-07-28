@@ -248,8 +248,8 @@ If the board is currently running the stock vendor OpenWrt 24.10.0 image and you
 
 | Интерфейс | Физическое расположение | Скорость | Роль в этом форке |
 |-----------|--------------------------|----------|---------------------|
-| eth0 | — | GbE | **WAN** |
-| eth1 | — | GbE | LAN (в бридже) |
+| eth0 | порт 1GbE | GbE | **WAN** |
+| eth1 | порт 1GbE | GbE | LAN (в бридже) |
 | eth2 | порт 2.5GbE | 2.5GbE | LAN (в бридже) |
 | eth3 | порт 2.5GbE, ближе к разъёму питания | 2.5GbE | LAN (в бридже) |
 
