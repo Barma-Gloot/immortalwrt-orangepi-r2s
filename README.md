@@ -21,8 +21,8 @@ A custom **ImmortalWrt** firmware for the **Orange Pi R2S (RISC-V KY X1)**, base
 
 | Interface | Physical Location | Speed | Role in this fork |
 |-----------|-------------------|-------|--------------------|
-| eth0 | — | GbE | **WAN** |
-| eth1 | — | GbE | LAN (bridged) |
+| eth0 | 1GbE port | GbE | **WAN** |
+| eth1 | 1GbE port | GbE | LAN (bridged) |
 | eth2 | 2.5GbE port | 2.5GbE | LAN (bridged) |
 | eth3 | 2.5GbE port, closest to power connector | 2.5GbE | LAN (bridged) |
 
@@ -248,8 +248,8 @@ If the board is currently running the stock vendor OpenWrt 24.10.0 image and you
 
 | Интерфейс | Физическое расположение | Скорость | Роль в этом форке |
 |-----------|--------------------------|----------|---------------------|
-| eth0 | — | GbE | **WAN** |
-| eth1 | — | GbE | LAN (в бридже) |
+| eth0 | порт 1GbE | GbE | **WAN** |
+| eth1 | порт 1GbE | GbE | LAN (в бридже) |
 | eth2 | порт 2.5GbE | 2.5GbE | LAN (в бридже) |
 | eth3 | порт 2.5GbE, ближе к разъёму питания | 2.5GbE | LAN (в бридже) |
 
