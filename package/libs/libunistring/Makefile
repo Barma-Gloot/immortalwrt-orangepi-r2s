@@ -46,6 +46,8 @@ CONFIGURE_ARGS += \
 	--without-libiconv-prefix \
 	--with-pic
 
+MAKE_FLAGS += SUBDIRS="doc gnulib-local lib"
+
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
 	$(CP) $(PKG_INSTALL_DIR)/usr/include/*.h $(1)/usr/include/
