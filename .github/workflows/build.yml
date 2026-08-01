@@ -1,0 +1,152 @@
+name: Build OpenWrt firmware (Orange Pi R2S)
+
+on:
+  workflow_dispatch:
+    inputs:
+      reset_ccache:
+        description: 'Clear ccache before build (use if build is broken/stale)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CONFIG_FILE: .github/build-config/openwrt.config
+  NETWORK_FILE: .github/build-config/network
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+
+concurrency:
+  group: build-firmware-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          echo "Before cleanup:"
+          df -h /
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune --all --force || true
+          sudo apt-get clean
+          echo "After cleanup:"
+          df -h /
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses-dev libssl-dev \
+            python3-setuptools rsync unzip zlib1g-dev file wget subversion \
+            swig time xsltproc zstd libelf-dev ccache curl device-tree-compiler \
+            ninja-build patch pkgconf autoconf automake bzip2 lrzsz mkisofs \
+            p7zip-full qemu-utils re2c scons texinfo uglifyjs upx-ucl xmlto
+
+      - name: Restore ccache
+        if: ${{ !inputs.reset_ccache }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-orangepi-r2s-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ runner.os }}-orangepi-r2s-
+
+      - name: Configure ccache
+        run: |
+          mkdir -p "$CCACHE_DIR"
+          ccache --max-size=8G
+          ccache --set-config=cache_dir="$CCACHE_DIR"
+          ccache -z
+
+      - name: Clone OpenWrt source
+        run: |
+          git clone --depth 1 --branch orangepi-r2s-new \
+            https://github.com/${{ github.repository }}.git openwrt
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Apply build configuration
+        run: |
+          cp "$CONFIG_FILE" openwrt/.config
+          mkdir -p openwrt/files/etc/config
+          cp "$NETWORK_FILE" openwrt/files/etc/config/network
+          cd openwrt
+          make defconfig
+
+      - name: Download sources
+        working-directory: openwrt
+        run: |
+          make download -j$(nproc)
+          find dl -maxdepth 1 -type f -size -1k -print
+
+      - name: Build firmware
+        working-directory: openwrt
+        env:
+          CCACHE_DIR: ${{ env.CCACHE_DIR }}
+        run: |
+          export PATH="/usr/lib/ccache:$PATH"
+          make -j$(nproc) V=s 2>&1 | tee build.log
+
+      - name: Show ccache stats
+        if: always()
+        run: ccache -s
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: openwrt/build.log
+          retention-days: 14
+
+      - name: Locate firmware images
+        id: images
+        working-directory: openwrt
+        run: |
+          IMG_DIR=bin/targets/ky/riscv64
+          if [ ! -d "$IMG_DIR" ]; then
+            echo "Image directory not found: $IMG_DIR"
+            exit 1
+          fi
+          ls -la "$IMG_DIR"
+          echo "img_dir=$IMG_DIR" >> "$GITHUB_OUTPUT"
+          MAIN_IMG=$(find "$IMG_DIR" -maxdepth 1 -name "*ext4-sysupgrade.img.gz")
+          if [ -z "$MAIN_IMG" ]; then
+            echo "ERROR: ext4-sysupgrade.img.gz not found"
+            exit 1
+          fi
+          if [ ! -s "$MAIN_IMG" ]; then
+            echo "ERROR: ext4-sysupgrade.img.gz is empty"
+            exit 1
+          fi
+          echo "main_image=$MAIN_IMG" >> "$GITHUB_OUTPUT"
+
+      - name: Create release tag
+        id: tag
+        run: echo "tag=firmware-$(date +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: OrangePi R2S firmware ${{ steps.tag.outputs.tag }}
+          body: |
+            Automated build from commit ${{ github.sha }}
+            Branch: orangepi-r2s-new
+          files: |
+            openwrt/${{ steps.images.outputs.img_dir }}/*sysupgrade.img.gz
+            openwrt/${{ steps.images.outputs.img_dir }}/*.manifest
+            openwrt/${{ steps.images.outputs.img_dir }}/sha256sums
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
