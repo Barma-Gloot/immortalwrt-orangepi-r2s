@@ -57,7 +57,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ runner.os }}-orangepi-r2s-${{ github.run_id }}
+          key: ccache-${{ runner.os }}-orangepi-r2s
           restore-keys: |
             ccache-${{ runner.os }}-orangepi-r2s-
 
