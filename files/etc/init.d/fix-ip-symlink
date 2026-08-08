@@ -1,0 +1,20 @@
+#!/bin/sh /etc/rc.common
+# Ensures /sbin/ip points to the real iproute2 binary (ip-full),
+# not the busybox applet, which lacks -j/JSON support required by
+# Nikki's TUN-online detection (ip -j link show ... | jsonfilter).
+# Busybox re-creates /sbin/ip -> busybox on every reinstall/upgrade,
+# and this system has no update-alternatives to protect the symlink.
+
+START=05
+STOP=99
+
+IP_FULL_BIN="/usr/libexec/ip-full"
+
+start() {
+	[ -x "$IP_FULL_BIN" ] || return 0
+	if [ "$(readlink -f /sbin/ip)" != "$IP_FULL_BIN" ]; then
+		rm -f /sbin/ip
+		ln -s "$IP_FULL_BIN" /sbin/ip
+		logger -t fix-ip-symlink "Relinked /sbin/ip -> $IP_FULL_BIN"
+	fi
+}

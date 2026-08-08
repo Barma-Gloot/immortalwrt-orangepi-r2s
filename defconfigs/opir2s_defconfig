@@ -201,3 +201,4 @@ CONFIG_PACKAGE_openssl-util=y
 CONFIG_PACKAGE_ucode-mod-uclient=y
 CONFIG_PACKAGE_conntrack=y
 CONFIG_BUSYBOX_CONFIG_LSMOD=y
+CONFIG_PACKAGE_kmod=y
